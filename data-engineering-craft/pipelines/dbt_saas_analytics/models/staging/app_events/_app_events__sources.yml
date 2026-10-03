@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: app_events
+    description: "Synthetic B2B SaaS raw event log (fictional). Append-only, at-least-once."
+    schema: raw
+    tables:
+      - name: raw_app_events
+        description: "Raw app interaction events. event_id usually-but-not-always unique."
+        loaded_at_field: _ingested_at
+        freshness:
+          warn_after:  {count: 2, period: hour}
+          error_after: {count: 6, period: hour}
+        columns:
+          - name: event_id
+            description: "Client event id. Duplicates possible (at-least-once delivery)."
+      - name: raw_app_users
+        description: "Synthetic current-state users table; source for the SCD2 snapshot."

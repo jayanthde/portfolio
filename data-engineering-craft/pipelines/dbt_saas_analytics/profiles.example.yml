@@ -1,0 +1,20 @@
+# Copy to ~/.dbt/profiles.yml  (NEVER commit the real one — .gitignore blocks it).
+# DuckDB needs no credentials, so this profile is safe and reviewer-runnable as-is.
+saas_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "dev.duckdb"
+      threads: 4
+    ci:
+      type: duckdb
+      path: "ci.duckdb"
+      threads: 4
+    prod:
+      # In a real cloud deploy this would be databricks/snowflake/bigquery with
+      # auth injected via env_var — see docs for the pattern. Kept as duckdb here
+      # so the public repo stays runnable with zero secrets.
+      type: duckdb
+      path: "prod.duckdb"
+      threads: 4

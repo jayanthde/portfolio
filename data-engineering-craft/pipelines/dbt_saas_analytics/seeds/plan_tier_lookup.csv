@@ -1,0 +1,5 @@
+plan_tier,display_name,is_paid
+free,Free,false
+pro,Pro,true
+enterprise,Enterprise,true
+unknown,Unknown,false

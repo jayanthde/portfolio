@@ -1,0 +1,35 @@
+name: 'saas_analytics'
+version: '1.0.0'
+config-version: 2
+
+# This project uses DuckDB so anyone can `dbt build` with zero cloud setup.
+# The methodology doc (/docs) explains where Snowflake/BigQuery/Redshift/Databricks differ.
+profile: 'saas_analytics'
+
+model-paths: ["models"]
+seed-paths: ["seeds", "seeds_raw"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  saas_analytics:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: ephemeral
+    marts:
+      +materialized: table   # fct_user_sessions overrides to incremental in its own config
+
+seeds:
+  saas_analytics:
+    seeds_raw:
+      # synthetic "raw log" loaded as a seed so the whole repo is self-contained
+      +schema: raw
+    plan_tier_lookup:
+      +schema: raw

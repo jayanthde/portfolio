@@ -1,0 +1,76 @@
+version: 2
+
+models:
+  - name: fct_user_sessions
+    description: >
+      Canonical session fact. **Grain: one row per session_key.** A session is one
+      actor's events split on 30-minute inactivity. Incremental via 3-day ingest
+      lookback + merge (idempotent). Feeds the engagement dashboard exposure.
+    config:
+      contract: {enforced: true}
+    columns:
+      - name: session_key
+        data_type: varchar
+        description: "Surrogate key = hash(actor_id, session_seq). The table grain."
+        constraints: [{type: not_null}, {type: primary_key}]
+        data_tests: [unique, not_null]
+      - name: actor_id
+        data_type: varchar
+        description: "coalesce(user_id, anonymous_id) — the acting identity."
+        data_tests: [not_null]
+      - name: session_date
+        data_type: date
+      - name: session_start_ts
+        data_type: timestamp
+      - name: session_end_ts
+        data_type: timestamp
+      - name: event_count
+        data_type: bigint
+      - name: page_view_count
+        data_type: bigint
+      - name: feature_used_count
+        data_type: bigint
+      - name: purchase_count
+        data_type: bigint
+      - name: revenue_usd
+        data_type: decimal(18,2)
+        description: "Sum of purchase-event revenue in the session, USD."
+        constraints:
+          - type: check
+            expression: "revenue_usd >= 0"
+      - name: session_duration_seconds
+        data_type: bigint
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 86400
+              config: {severity: warn}
+      - name: received_at
+        data_type: timestamp
+
+  - name: dim_users
+    description: "Conformed SCD2 user dimension. Grain: one row per user_key (version)."
+    columns:
+      - name: user_key
+        data_tests: [unique, not_null]
+      - name: user_id
+        description: "Business key. Not unique (multiple SCD2 versions per user)."
+        data_tests: [not_null]
+
+  - name: fct_user_weekly_engagement
+    description: "User x ISO-week engagement. Grain: one row per actor per week. Built on fct_user_sessions."
+    columns:
+      - name: is_engaged
+        description: "active_days >= 3 in the week. Business definition — a contract."
+
+exposures:
+  - name: engagement_dashboard
+    type: dashboard
+    maturity: high
+    url: https://bi.example.com/dash/engagement
+    description: "Synthetic downstream BI dashboard (fictional)."
+    depends_on:
+      - ref('fct_user_weekly_engagement')
+    owner:
+      name: RevOps (fictional)
+      email: revops@example.com

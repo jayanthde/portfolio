@@ -1,0 +1,3 @@
+user_id,plan_tier,is_active,region,updated_at
+u_alice,enterprise,true,NA,2026-03-01 00:00:00
+u_bob,pro,true,EU,2026-02-01 00:00:00

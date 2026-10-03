@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_app_events__events
+    description: "Cleaned, DEDUPED event stream. Grain: one row per event_id."
+    columns:
+      - name: event_id
+        description: "Unique after dedupe. Tested HERE (where dedupe happens), not downstream."
+        data_tests: [unique, not_null]
+      - name: actor_id
+        description: "coalesce(user_id, anonymous_id). Never null."
+        data_tests: [not_null]
+      - name: event_type
+        data_tests:
+          - accepted_values:
+              values: ['login', 'page_view', 'feature_used', 'purchase']
+
+  - name: stg_app_events__users
+    description: "Cleaned current-state users."
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]

@@ -1,0 +1,53 @@
+name: dbt CI
+
+# Runnable by anyone, with no cloud account or secrets, because the pipeline runs
+# on DuckDB. This is deliberate: a public portfolio should go green on `git push`.
+on:
+  pull_request:
+    paths: ['pipelines/**']
+  push:
+    branches: [main]
+    paths: ['pipelines/**']
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pipelines/dbt_saas_analytics
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dbt-duckdb + packages
+        run: |
+          pip install dbt-duckdb==1.8.*
+          cp profiles.example.yml profiles.yml
+
+      - name: dbt deps
+        run: dbt deps --profiles-dir .
+
+      - name: dbt seed (load synthetic raw log + lookups)
+        run: dbt seed --profiles-dir . --target ci
+
+      - name: dbt snapshot (SCD2)
+        run: dbt snapshot --profiles-dir . --target ci
+
+      # `build` interleaves run + test in DAG order so a model's tests gate its children.
+      - name: dbt build (run + test)
+        run: dbt build --profiles-dir . --target ci --fail-fast
+
+      # Prove idempotency: a second incremental run must not change results.
+      - name: dbt build again (idempotency check)
+        run: dbt build --profiles-dir . --target ci --select fct_user_sessions
+
+      - name: dbt docs generate
+        run: dbt docs generate --profiles-dir . --target ci
+
+# NOTE: In a real cloud deploy this job would add Slim CI:
+#   dbt build --select state:modified+ --defer --state ./prod-manifest --target ci
+# which requires a stored prod manifest. Omitted here so the public repo is
+# self-contained and runnable without external state. See /docs for the full plan.
